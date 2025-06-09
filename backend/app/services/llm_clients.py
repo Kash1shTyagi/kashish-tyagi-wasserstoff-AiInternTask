@@ -10,8 +10,8 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 try:
-    from groq import GroqClient
-    groq_client: Optional[GroqClient] = GroqClient(api_key=settings.GROQ_API_KEY)
+    from groq import Groq
+    groq_client: Optional[Groq] = Groq(api_key=settings.GROQ_API_KEY)
     logger.info("Initialized GroqClient successfully.")
 except Exception as e:
     groq_client = None
@@ -53,7 +53,7 @@ def get_embedding_vector_groq(text: str) -> List[float]:
 
     try:
         response = groq_client.embeddings.create(
-            model=settings.GROQ_MODEL_NAME + "-embed",
+            model=settings.GROQ_MODEL_NAME,
             input=[text]
         )
         embedding = response.embeddings[0]
@@ -72,11 +72,13 @@ def get_embedding_vector_gemini(text: str) -> List[float]:
         raise RuntimeError("GEMINI_API_KEY is not set for embeddings.")
 
     try:
-        embed_model = genai.Embedding.create(
-            model="embedding-gecko-001",
-            input=[text]
+        response = genai.embed_content(
+            model="models/embedding-001",  
+            content=[text],               
+            task_type="SEMANTIC_SIMILARITY" 
         )
-        return embed_model["results"][0]["embedding"]
+        
+        return response.get("embedding", [])
     except Exception as e:
         logger.error(f"Gemini embedding error: {e}")
         raise RuntimeError(f"Gemini embedding failed: {e}")
