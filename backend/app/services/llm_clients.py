@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from groq import Groq
+
     groq_client: Optional[Groq] = Groq(api_key=settings.GROQ_API_KEY)
     logger.info("Initialized GroqClient successfully.")
 except Exception as e:
@@ -56,8 +57,7 @@ def get_embedding_vector_groq(text: str) -> List[float]:
 
     try:
         response = groq_client.embeddings.create(
-            model=settings.GROQ_MODEL_NAME,
-            input=[text]
+            model=settings.GROQ_MODEL_NAME, input=[text]
         )
         embedding = response.embeddings[0]
         return embedding
@@ -78,17 +78,21 @@ def get_embedding_vector_gemini(text: str) -> List[float]:
         response = genai.embed_content(
             model="models/embedding-001",
             content=[text],
-            task_type="SEMANTIC_SIMILARITY"
+            task_type="SEMANTIC_SIMILARITY",
         )
         embedding = response.get("embedding", [])
-        if isinstance(embedding, list) and len(embedding) == 1 and isinstance(embedding[0], list):
+        if (
+            isinstance(embedding, list)
+            and len(embedding) == 1
+            and isinstance(embedding[0], list)
+        ):
             embedding = embedding[0]
         embedding = [float(x) for x in embedding]
         return embedding
     except Exception as e:
         logger.error(f"Gemini embedding error: {e}")
         raise RuntimeError(f"Gemini embedding failed: {e}")
-    
+
 
 def get_query_embedding(query_text: str) -> List[float]:
     """
@@ -96,7 +100,11 @@ def get_query_embedding(query_text: str) -> List[float]:
     Ensures the output is a flat list of floats.
     """
     embedding = get_embedding_vector(query_text)
-    if isinstance(embedding, list) and len(embedding) == 1 and isinstance(embedding[0], list):
+    if (
+        isinstance(embedding, list)
+        and len(embedding) == 1
+        and isinstance(embedding[0], list)
+    ):
         embedding = embedding[0]
     return [float(x) for x in embedding]
 
@@ -125,14 +133,16 @@ async def extract_answer_groq(question: str, chunk: Dict) -> Dict[str, str]:
 
     prompt = (
         f"You are a research assistant. The user asked:\n\n"
-        f"\"{question}\"\n\n"
+        f'"{question}"\n\n'
         f"Below is a document excerpt (DocID: {chunk['doc_id']}, Page: {chunk['page_num']}, Para: {chunk['paragraph_index']}):\n\n"
         f"\"\"\"{chunk['chunk_text']}\"\"\"\n\n"
         "If this excerpt contains a relevant answer, extract a concise snippet (1-2 sentences). "
-        "Otherwise respond with \"NO_ANSWER\".\n\n"
+        'Otherwise respond with "NO_ANSWER".\n\n'
         "Return exactly JSON: {\n"
         '  "answer": "<text or NO_ANSWER>",\n'
-        '  "citation": "DocID: ' + f"{chunk['doc_id']}, Page: {chunk['page_num']}, Para: {chunk['paragraph_index']}" + '"\n'
+        '  "citation": "DocID: '
+        + f"{chunk['doc_id']}, Page: {chunk['page_num']}, Para: {chunk['paragraph_index']}"
+        + '"\n'
         "}"
     )
 
@@ -143,7 +153,7 @@ async def extract_answer_groq(question: str, chunk: Dict) -> Dict[str, str]:
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.0
+            temperature=0.0,
         )
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
@@ -156,6 +166,7 @@ async def extract_answer_groq(question: str, chunk: Dict) -> Dict[str, str]:
 
 
 _FALLBACK_JSON = '{"answer": "NO_ANSWER", "citation": ""}'
+
 
 def _do_chat(prompt: str) -> str:
     try:
@@ -189,32 +200,30 @@ def _do_chat(prompt: str) -> str:
         logger.error("Gemini send_message error: %s", e)
         return _FALLBACK_JSON
 
+
 async def extract_answer_gemini(question: str, chunk: Dict) -> Dict[str, str]:
     """
     Uses google.generativeai to extract an answer from a document chunk.
     Returns {"answer": str, "citation": str}.
     """
-    doc_id     = chunk.get("doc_id", "UnknownDoc")
-    page_num   = chunk.get("page_num", 0)
-    para_idx   = chunk.get("paragraph_index", 0)
+    doc_id = chunk.get("doc_id", "UnknownDoc")
+    page_num = chunk.get("page_num", 0)
+    para_idx = chunk.get("paragraph_index", 0)
     chunk_text = chunk.get("chunk_text", "")
 
-
     prompt = (
-         f"You are a research assistant. The user asked:\n\n"
-         f"\"{question}\"\n\n"
-         f"Here is the document excerpt (DocID: {doc_id}, Page: {page_num}, Para: {para_idx}):\n\n"
-         f"\"\"\"\n{chunk_text}\n\"\"\"\n\n"
-         "Please respond **strictly** in JSON **with these two fields**:\n"
-         "{\n"
-         '  "answer": "<the exact snippet or NO_ANSWER>",\n'
-         '  "citation": "DocID: <doc_id>, Page: <page_num>, Para: <para_idx>"\n'
-         "}\n\n"
-         "If you do not see the answer to the question in this excerpt, return:\n"
-         "{ \"answer\": \"NO_ANSWER\", \"citation\": \"\" }"
-     )
-
-
+        f"You are a research assistant. The user asked:\n\n"
+        f'"{question}"\n\n'
+        f"Here is the document excerpt (DocID: {doc_id}, Page: {page_num}, Para: {para_idx}):\n\n"
+        f'"""\n{chunk_text}\n"""\n\n'
+        "Please respond **strictly** in JSON **with these two fields**:\n"
+        "{\n"
+        '  "answer": "<the exact snippet or NO_ANSWER>",\n'
+        '  "citation": "DocID: <doc_id>, Page: <page_num>, Para: <para_idx>"\n'
+        "}\n\n"
+        "If you do not see the answer to the question in this excerpt, return:\n"
+        '{ "answer": "NO_ANSWER", "citation": "" }'
+    )
 
     try:
         raw = await asyncio.to_thread(_do_chat, prompt)
@@ -230,6 +239,7 @@ async def extract_answer_gemini(question: str, chunk: Dict) -> Dict[str, str]:
         return {"answer": "NO_ANSWER", "citation": ""}
 
     return {"answer": data["answer"], "citation": data["citation"]}
+
 
 async def generate_theme_summary(
     snippets: List[Dict], theme_id: int, question: str
@@ -261,16 +271,14 @@ async def generate_theme_groq(
     if groq_client is None:
         raise RuntimeError("GroqClient is not initialized.")
 
-    snippet_lines = "\n".join(
-        [f"[{s['citation']}] \"{s['text']}\"" for s in snippets]
-    )
+    snippet_lines = "\n".join([f"[{s['citation']}] \"{s['text']}\"" for s in snippets])
 
     prompt = (
-        f"You are a research assistant. The user asked: \"{question}\"\n\n"
+        f'You are a research assistant. The user asked: "{question}"\n\n'
         f"Below are the excerpts belonging to Theme {theme_id}:\n\n"
         f"{snippet_lines}\n\n"
         "Task:\n"
-        "1) Provide a short label: \"Theme {theme_id} – <name>\".\n"
+        '1) Provide a short label: "Theme {theme_id} – <name>".\n'
         "2) Write a 2-3 sentence synthesis of the main idea across these excerpts.\n"
         "3) Return all citations in a JSON array.\n\n"
         "Return exactly JSON:\n"
@@ -288,93 +296,97 @@ async def generate_theme_groq(
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt},
             ],
-            temperature=0.2
+            temperature=0.2,
         )
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
         return {
             "theme_name": data.get("theme_name", f"Theme {theme_id}"),
             "summary": data.get("summary", ""),
-            "citations": data.get("citations", [])
+            "citations": data.get("citations", []),
         }
     except Exception as e:
         logger.error(f"Groq generate_theme error: {e}")
         return {
             "theme_name": f"Theme {theme_id}",
             "summary": "",
-            "citations": [s["citation"] for s in snippets]
+            "citations": [s["citation"] for s in snippets],
         }
 
 
-_FALLBACK_THEME = {
-    "theme_name": None,
-    "summary": "",
-    "citations": []
-}
+_FALLBACK_THEME = {"theme_name": None, "summary": "", "citations": []}
+
 
 def _do_theme_chat(prompt: str) -> str:
     try:
         chat = _model.start_chat()
         resp = chat.send_message(prompt)
-
         if hasattr(resp, "result"):
             candidates = resp.result.candidates
             text = candidates[0].content.parts[0].text if candidates else ""
         else:
             text = getattr(resp, "text", "") or ""
-
         text = re.sub(r"```json\s*|\s*```", "", text)
-
         stripped = text.strip()
         if stripped.startswith('"') and stripped.endswith('"'):
             text = stripped[1:-1].replace('\\"', '"')
-
         if not text.strip().startswith("{"):
             return ""
-
         return text
-
     except Exception as e:
         logger.error("Gemini theme send_message error: %s", e)
         return ""
+
 
 async def generate_theme_gemini(
     snippets: List[Dict], theme_id: int, question: str
 ) -> Dict:
     """
-    Uses google.generativeai to synthesize a thematic summary from multiple snippets.
+    Uses google.generativeai to synthesize thematic summaries from multiple snippets.
+    Expects the model to return {"themes":[{...},...]}.
     """
     snippet_lines = "\n".join([f"[{s['citation']}] \"{s['text']}\"" for s in snippets])
-
     prompt = (
-        f"You are a research assistant. The user asked: \"{question}\"\n\n"
-        f"Below are the excerpts belonging to Theme {theme_id}:\n\n"
-        f"{snippet_lines}\n\n"
+        f'You are a research assistant. The user asked: "{question}"\n\n'
+        f"Below are the excerpts for analysis:\n\n{snippet_lines}\n\n"
         "Task:\n"
-        f"1) Provide a short label: \"Theme {theme_id} – <name>\".\n"
-        "2) Write a 2-3 sentence synthesis of the main idea across these excerpts.\n"
-        "3) Return all citations in a JSON array.\n\n"
-        "Return exactly JSON:\n"
+        "Identify up to 3 distinct themes across these excerpts. For each theme:\n"
+        '  a) Provide a label: "Theme {theme_id}.{i} – <name>".\n'
+        "  b) Give a 2-3 sentence summary.\n"
+        "  c) List citations in an array.\n\n"
+        "Return exactly JSON with this structure:\n"
         "{\n"
-        '  "theme_name": "<short label>",\n'
-        '  "summary": "<synthesis>",\n'
-        '  "citations": ["<cit1>", "<cit2>", ...]\n'
-        "}"
+        '  "themes": [\n'
+        '    { "theme_name": "<label>", "summary": "<text>", "citations": ["<cit1>", ...] },\n'
+        "    ... up to 3 items ...\n"
+        "  ]\n"
+        "}\n"
+        "Do not include any extra text or markdown fences."
     )
-
     try:
         raw = await asyncio.to_thread(_do_theme_chat, prompt)
         data = json.loads(raw)
-
+        themes = data.get("themes")
+        if isinstance(themes, list):
+            out = []
+            for theme in themes:
+                out.append(
+                    {
+                        "theme_name": theme.get("theme_name", ""),
+                        "summary": theme.get("summary", ""),
+                        "citations": theme.get("citations", []),
+                    }
+                )
+            return {"themes": out}
         return {
-            "theme_name": data.get("theme_name", f"Theme {theme_id}"),
-            "summary": data.get("summary", ""),
-            "citations": data.get("citations", []),
+            "themes": [
+                {
+                    "theme_name": data.get("theme_name", f"Theme {theme_id}"),
+                    "summary": data.get("summary", ""),
+                    "citations": data.get("citations", []),
+                }
+            ]
         }
     except Exception as e:
-        logger.error(f"Gemini generate_theme error: {e}")
-        return {
-            "theme_name": data.get("theme_name", f"Theme {theme_id}") if "data" in locals() else f"Theme {theme_id}",
-            "summary": data.get("summary", "") if "data" in locals() else "",
-            "citations": data.get("citations", []) if "data" in locals() else [s.get("citation","") for s in snippets],
-        }
+        logger.error(f"Gemini generate_theme error: {e}, raw: {raw!r}")
+        return {"themes": []}

@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Union
 import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -49,12 +49,17 @@ async def generate_themes(
         doc_ids = [row.doc_id for row in rows]
 
     if not doc_ids:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No documents available to query.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No documents available to query.",
+        )
 
     all_snippets: List[dict] = []
 
     async def process_doc_snippets(doc_id: str):
-        chunks = retrieve_top_k_chunks(req.question, doc_id, top_k=req.top_k_per_doc or 3)
+        chunks = retrieve_top_k_chunks(
+            req.question, doc_id, top_k=req.top_k_per_doc or 3
+        )
         tasks = [extract_answer_from_chunk(req.question, c) for c in chunks]
         answers = await asyncio.gather(*tasks, return_exceptions=True)
         for ans in answers:
@@ -65,7 +70,7 @@ async def generate_themes(
                 all_snippets.append({
                     "doc_id": doc_id,
                     "text": ans["answer"],
-                    "citation": ans["citation"]
+                    "citation": ans["citation"],
                 })
 
     await asyncio.gather(*(process_doc_snippets(did) for did in doc_ids))
@@ -74,18 +79,35 @@ async def generate_themes(
         return ThemeResponse(themes=[])
 
     try:
-        theme_dicts = await identify_and_summarize_themes(all_snippets, req.question)
+        raw_themes: Union[dict, List[dict]] = await identify_and_summarize_themes(
+            all_snippets, req.question
+        )
     except Exception as e:
         logger.error(f"identify_and_summarize_themes failed: {e}")
         raise HTTPException(status_code=500, detail="Theme identification failed.")
 
-    themes: List[ThemeOutput] = [
-        ThemeOutput(
-            theme_name=t["theme_name"],
-            summary=t["summary"],
-            citations=t["citations"]
-        )
-        for t in theme_dicts
-    ]
+    if isinstance(raw_themes, dict) and "themes" in raw_themes:
+        themes_list = raw_themes["themes"]
 
-    return ThemeResponse(themes=themes)
+    elif isinstance(raw_themes, list):
+        first = raw_themes[0]
+        if isinstance(first, dict) and "themes" in first:
+            themes_list = first["themes"] 
+        else:
+            themes_list = raw_themes      
+
+    else:
+        themes_list = []
+
+    output_themes: List[ThemeOutput] = []
+    for t in themes_list:
+        name = t.get("theme_name") or ""
+        summary = t.get("summary") or ""
+        citations = t.get("citations") or []
+        output_themes.append(ThemeOutput(
+            theme_name=name,
+            summary=summary,
+            citations=citations
+        ))
+
+    return ThemeResponse(themes=output_themes)
