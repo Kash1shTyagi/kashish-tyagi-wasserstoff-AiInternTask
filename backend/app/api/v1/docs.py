@@ -3,6 +3,8 @@ import shutil
 import logging
 from typing import List
 from pathlib import Path
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue
 
 from fastapi import APIRouter, HTTPException, Depends, Query, status
 from sqlalchemy.orm import Session
@@ -99,15 +101,16 @@ def delete_document(
         logger.error(f"Failed to delete DocumentORM row for {doc_id}: {e}")
         raise HTTPException(status_code=500, detail="Database deletion failed.")
 
-    from qdrant_client import QdrantClient
-    from qdrant_client.http.models import Filter, FieldCondition, MatchValue
-
     try:
         qdrant = QdrantClient(url=settings.QDRANT_URL)
-        delete_filter = Filter(
+        points_selector = Filter(
             must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]
         )
-        qdrant.delete(collection_name="document_chunks", delete_filter=delete_filter)
+        qdrant.delete(
+            collection_name="document_chunks",
+            points_selector=points_selector,
+            wait=True
+        )
     except Exception as e:
         logger.error(f"Failed to delete embeddings for {doc_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to delete embeddings from vector store.")
