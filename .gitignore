@@ -2,9 +2,8 @@ __pycache__/
 *.pyc
 venv/
 **/.env
-backend/data/uploads/
+backend/data    
 
-**/Dockerfile
-**/backend.log
+backend/logs
 
 frontend/node_modules/
