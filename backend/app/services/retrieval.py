@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 COLLECTION_NAME = "document_chunks"
 
-qdrant_client = QdrantClient(url=settings.QDRANT_URL)
+qdrant_client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY, prefer_grpc=False)
 
 
 def retrieve_top_k_chunks(

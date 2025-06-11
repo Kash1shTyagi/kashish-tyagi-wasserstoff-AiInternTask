@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     DATA_DIR: str = os.getenv("DATA_DIR", "data/uploads")
     DATABASE_URL: str
     QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
+    QDRANT_API_KEY: str = os.getenv("QDRANT_API_KEY")
 
     TESSERACT_CMD: str = os.getenv("TESSERACT_CMD", "tesseract")
 

@@ -27,7 +27,7 @@ def ensure_collection_exists() -> None:
     Deletes any existing collection named COLLECTION_NAME, then creates a new one
     using single-vector mode with the vector field "vector" (dimension = VECTOR_DIMENSION).
     """
-    client = QdrantClient(url=settings.QDRANT_URL)
+    client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY, prefer_grpc=False)
     existing = client.get_collections().collections
     if not any(col.name == COLLECTION_NAME for col in existing):
         logger.info(f"Creating Qdrant collection '{COLLECTION_NAME}' with vector field 'vector' and size {VECTOR_DIMENSION}.")
@@ -49,7 +49,7 @@ def index_chunks_in_vector_store(chunks: List[Dict], batch_size: int = 16) -> No
         return
 
     ensure_collection_exists()
-    client = QdrantClient(url=settings.QDRANT_URL)
+    client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY, prefer_grpc=False)
     buffer_points: List[Dict] = []
 
     for idx, chunk in enumerate(chunks):

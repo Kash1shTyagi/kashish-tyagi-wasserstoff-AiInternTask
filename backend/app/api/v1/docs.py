@@ -102,7 +102,7 @@ def delete_document(
         raise HTTPException(status_code=500, detail="Database deletion failed.")
 
     try:
-        qdrant = QdrantClient(url=settings.QDRANT_URL)
+        qdrant = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY, prefer_grpc=False )
         points_selector = Filter(
             must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))]
         )
