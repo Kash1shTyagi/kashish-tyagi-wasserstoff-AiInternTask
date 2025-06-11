@@ -49,7 +49,7 @@ def index_chunks_in_vector_store(chunks: List[Dict], batch_size: int = 16) -> No
         return
 
     ensure_collection_exists()
-    client = QdrantClient(url=settings.QDRANT_URL)
+    client = QdrantClient(url=settings.QDRANT_URL, timeout=20)
     buffer_points: List[Dict] = []
 
     for idx, chunk in enumerate(chunks):
