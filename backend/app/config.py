@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
 
-    TESSERACT_CMD: str = os.getenv("TESSERACT_CMD", r"C:/Program Files/Tesseract-OCR/tesseract.exe")
+    TESSERACT_CMD: str = os.getenv("TESSERACT_CMD", "tesseract")
 
     GROQ_API_KEY: str
     GROQ_MODEL_NAME: str = "llama3_70b_8192"
