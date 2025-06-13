@@ -1,6 +1,6 @@
-import React, { useEffect, useState, Fragment } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
 import { db } from '@/utils/db';
+import { Dialog, Transition } from '@headlessui/react';
+import React, { Fragment, useEffect, useState } from 'react';
 
 interface Props {
     isOpen: boolean;

@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { db } from '@/utils/db';
 import api from '@/utils/api';
+import { useEffect, useState } from 'react';
 
 export interface DocumentMeta {
     doc_id: string;

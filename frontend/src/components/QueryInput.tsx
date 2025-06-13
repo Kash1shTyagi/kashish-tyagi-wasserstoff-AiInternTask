@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import type { FormEvent } from 'react';
-import { Button } from './ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import type { FormEvent } from 'react';
+import { useState } from 'react';
 import api from '../utils/api';
+import { Button } from './ui/button';
 
 interface QueryInputProps {
   onResponse: (data: any) => void;

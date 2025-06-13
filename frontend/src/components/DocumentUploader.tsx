@@ -1,7 +1,7 @@
-import React, { useCallback, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
-import api from '@/utils/api';
 import { Button } from '@/components/ui/button';
+import api from '@/utils/api';
+import { useCallback, useState } from 'react';
+import { useDropzone } from 'react-dropzone';
 import { toast } from 'react-hot-toast';
 
 export interface UploadResult {

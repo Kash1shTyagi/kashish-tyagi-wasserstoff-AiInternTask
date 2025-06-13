@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import DocumentUploader from '../components/DocumentUploader';
-import type { UploadResult } from '../components/DocumentUploader';
-import DocumentList from '../components/DocumentList';
-import type { DocumentMeta } from '../components/DocumentList';
 import QueryInput from '@/components/QueryInput';
-import AnswerTable from '../components/AnswerTable';
+import { useEffect, useState } from 'react';
 import type { DocumentAnswer } from '../components/AnswerTable';
-import ThemeSummary from '../components/ThemeSummary';
-import type { ThemeItem } from '../components/ThemeSummary';
+import AnswerTable from '../components/AnswerTable';
+import type { DocumentMeta } from '../components/DocumentList';
+import DocumentList from '../components/DocumentList';
+import type { UploadResult } from '../components/DocumentUploader';
+import DocumentUploader from '../components/DocumentUploader';
 import ThemeInput from '../components/ThemeInput';
+import type { ThemeItem } from '../components/ThemeSummary';
+import ThemeSummary from '../components/ThemeSummary';
 
 import DocumentViewerModal from '../components/DocumentViewerModal';
 
