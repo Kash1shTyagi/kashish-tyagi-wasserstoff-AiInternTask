@@ -4,7 +4,7 @@ import hashlib
 from typing import List, Dict
 
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import VectorParams
+from qdrant_client.http.models import VectorParams, PayloadSchemaType
 
 from app.config import settings
 from app.services.llm_clients import get_embedding_vector
@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 COLLECTION_NAME = "document_chunks"
 VECTOR_DIMENSION = 768
 
+
 def deterministic_uuid(doc_id: str, page_num: int, para_idx: int) -> str:
     """
     Generate a deterministic UUID for each chunk based on its doc_id, page number, and paragraph index.
@@ -22,21 +23,50 @@ def deterministic_uuid(doc_id: str, page_num: int, para_idx: int) -> str:
     md5_hash = hashlib.md5(key.encode("utf-8")).hexdigest()
     return str(uuid.UUID(md5_hash))
 
+
 def ensure_collection_exists() -> None:
     """
     Deletes any existing collection named COLLECTION_NAME, then creates a new one
     using single-vector mode with the vector field "vector" (dimension = VECTOR_DIMENSION).
     """
-    client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY, prefer_grpc=False)
+    client = QdrantClient(
+        url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY, prefer_grpc=False
+    )
     existing = client.get_collections().collections
     if not any(col.name == COLLECTION_NAME for col in existing):
-        logger.info(f"Creating Qdrant collection '{COLLECTION_NAME}' with vector field 'vector' and size {VECTOR_DIMENSION}.")
+        logger.info(
+            f"Creating Qdrant collection '{COLLECTION_NAME}' with vector field 'vector' and size {VECTOR_DIMENSION}."
+        )
         client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(size=VECTOR_DIMENSION, distance="Cosine"),
         )
     else:
-        logger.info(f"Collection '{COLLECTION_NAME}' already exists. Skipping deletion/recreation.")
+        logger.info(
+            f"Collection '{COLLECTION_NAME}' already exists. Skipping deletion/recreation."
+        )
+    try:
+        client.create_payload_index(
+            collection_name=COLLECTION_NAME,
+            field_name="doc_id",
+            field_schema="keyword",
+        )
+        logger.info("Created payload index on 'doc_id' with schema 'keyword'.")
+    except Exception as e:
+        logger.debug(f"Could not create payload index with string schema: {e}")
+        try:
+            client.create_payload_index(
+                collection_name=COLLECTION_NAME,
+                field_name="doc_id",
+                field_schema=models.KeywordIndexParams(),
+            )
+            logger.info("Created payload index on 'doc_id' using models.KeywordIndexParams.")
+        except Exception as e2:
+            if "already exists" in str(e2).lower():
+                logger.info("Payload index on 'doc_id' already exists.")
+            else:
+                logger.error(f"Failed to create payload index on 'doc_id': {e2}")
+
 
 def index_chunks_in_vector_store(chunks: List[Dict], batch_size: int = 16) -> None:
     """
@@ -49,7 +79,9 @@ def index_chunks_in_vector_store(chunks: List[Dict], batch_size: int = 16) -> No
         return
 
     ensure_collection_exists()
-    client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY, prefer_grpc=False)
+    client = QdrantClient(
+        url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY, prefer_grpc=False
+    )
     buffer_points: List[Dict] = []
 
     for idx, chunk in enumerate(chunks):
@@ -60,16 +92,24 @@ def index_chunks_in_vector_store(chunks: List[Dict], batch_size: int = 16) -> No
 
         try:
             vector = get_embedding_vector(text)
-            if isinstance(vector, list) and len(vector) == 1 and isinstance(vector[0], list):
+            if (
+                isinstance(vector, list)
+                and len(vector) == 1
+                and isinstance(vector[0], list)
+            ):
                 vector = vector[0]
             vector = [float(x) for x in vector]
         except Exception as e:
-            logger.error(f"Embedding failed for doc_id {doc_id}, page {page_num}, para {para_idx}: {e}")
+            logger.error(
+                f"Embedding failed for doc_id {doc_id}, page {page_num}, para {para_idx}: {e}"
+            )
             continue
 
         if len(vector) != VECTOR_DIMENSION:
-            logger.error(f"Embedding dimension mismatch: expected {VECTOR_DIMENSION}, got {len(vector)} "
-                         f"for doc_id {doc_id}, page {page_num}, para {para_idx}")
+            logger.error(
+                f"Embedding dimension mismatch: expected {VECTOR_DIMENSION}, got {len(vector)} "
+                f"for doc_id {doc_id}, page {page_num}, para {para_idx}"
+            )
             continue
 
         point_id = deterministic_uuid(doc_id, page_num, para_idx)
@@ -88,11 +128,11 @@ def index_chunks_in_vector_store(chunks: List[Dict], batch_size: int = 16) -> No
         if len(buffer_points) >= batch_size or idx == len(chunks) - 1:
             try:
                 client.upsert(
-                    collection_name=COLLECTION_NAME,
-                    points=buffer_points,
-                    wait=True
+                    collection_name=COLLECTION_NAME, points=buffer_points, wait=True
                 )
-                logger.info(f"Upserted {len(buffer_points)} points into collection '{COLLECTION_NAME}'.")
+                logger.info(
+                    f"Upserted {len(buffer_points)} points into collection '{COLLECTION_NAME}'."
+                )
             except Exception as e:
                 logger.error(f"Failed to upsert batch to Qdrant: {e}")
             buffer_points.clear()
