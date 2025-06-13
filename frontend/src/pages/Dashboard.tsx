@@ -40,6 +40,8 @@ export default function Dashboard() {
         try {
             const resp = await api.get<DocumentMeta[]>('/docs');
             setDocs(resp.data);
+        } catch (err) {
+            console.error('Failed to load docs', err);
         } finally {
             setLoadingDocs(false);
         }
@@ -56,6 +58,8 @@ export default function Dashboard() {
             };
             const res = await api.post('/theme', body);
             setThemes(res.data.themes);
+        } catch (err) {
+            console.error('Error generating themes', err);
         } finally {
             setLoadingTheme(false);
         }
@@ -94,33 +98,18 @@ export default function Dashboard() {
 
     const handleDelete = async (docId: string) => {
         if (!confirm('Delete this document?')) return;
-        await api.delete(`/docs/${docId}`);
-        setFileMap(m => {
-            const { [docId]: _, ...rest } = m;
-            return rest;
-        });
-        await loadDocs();
+        try {
+            await api.delete(`/docs/${docId}`);
+            setFileMap(m => {
+                const { [docId]: _, ...rest } = m;
+                return rest;
+            });
+            setDocs(prev => prev.filter(d => d.doc_id !== docId));
+        } catch (err: any) {
+            console.error('Error deleting document:', err);
+            alert('Error deleting document: ' + (err.response?.data?.detail || 'Deletion failed'));
+        }
     };
-
-    // const handleQuery = async (q: string) => {
-    //     if (!q.trim()) return;
-    //     setLoadingQuery(true);
-    //     try {
-    //         const body = {
-    //             question: q,
-    //             doc_ids: selectedDocIds.length ? selectedDocIds : undefined,
-    //             top_k_per_doc: 3,
-    //         };
-    //         const [aRes, tRes] = await Promise.all([
-    //             api.post('/query', body),
-    //             api.post('/theme', body),
-    //         ]);
-    //         setAnswers(aRes.data.individual_answers);
-    //         setThemes(tRes.data.themes);
-    //     } finally {
-    //         setLoadingQuery(false);
-    //     }
-    // };
 
     const openPreview = async (doc: DocumentMeta) => {
         const ext = doc.filename.split('.').pop()?.toLowerCase();
@@ -152,7 +141,6 @@ export default function Dashboard() {
                         : <DocumentList
                             docs={docs}
                             onSelectionChange={setSelectedDocIds}
-                            onDocsUpdate={setDocs}
                             onDelete={handleDelete}
                         />
                 }

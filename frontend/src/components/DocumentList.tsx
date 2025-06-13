@@ -1,4 +1,3 @@
-import api from '@/utils/api';
 import { useEffect, useState } from 'react';
 
 export interface DocumentMeta {
@@ -13,13 +12,13 @@ export interface DocumentMeta {
 interface DocumentListProps {
     docs: DocumentMeta[];
     onSelectionChange: (ids: string[]) => void;
-    onDocsUpdate: (newDocs: DocumentMeta[]) => void; 
     onDelete: (docId: string) => void | Promise<void>;
 }
 
 export default function DocumentList({
     docs,
     onSelectionChange,
+    onDelete,
 }: DocumentListProps) {
     const [filtered, setFiltered] = useState<DocumentMeta[]>(docs);
     const [search, setSearch] = useState('');
@@ -29,7 +28,7 @@ export default function DocumentList({
         setFiltered(docs);
         setSelectedIds(new Set());
         onSelectionChange([]);
-    }, [docs]);
+    }, [docs, onSelectionChange]);
 
     useEffect(() => {
         const q = search.toLowerCase();
@@ -50,18 +49,10 @@ export default function DocumentList({
         onSelectionChange(Array.from(next));
     };
 
-    const handleDelete = async (docId: string) => {
-        console.log('[handleDelete] docId:', docId);
-        try {
-            const res = await api.delete(`/docs/${docId}`);
-            console.log('[handleDelete] Deletion successful:', res.data);
-            onDelete(docId);  
-        } catch (error: any) {
-            console.error('[handleDelete] Error deleting document:', error);
-            alert('Error deleting document: ' + (error.response?.data?.detail || 'Deletion failed'));
-        }
+    const handleDelete = (docId: string) => {
+        console.log('[DocumentList] delete requested for:', docId);
+        onDelete(docId);
     };
-
 
     return (
         <div>
@@ -118,8 +109,3 @@ export default function DocumentList({
         </div>
     );
 }
-function onDelete(docId: string) {
-    console.log(docId)
-    throw new Error('Function not implemented.');
-}
-
