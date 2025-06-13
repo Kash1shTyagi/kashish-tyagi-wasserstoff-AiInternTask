@@ -102,25 +102,25 @@ export default function Dashboard() {
         await loadDocs();
     };
 
-    const handleQuery = async (q: string) => {
-        if (!q.trim()) return;
-        setLoadingQuery(true);
-        try {
-            const body = {
-                question: q,
-                doc_ids: selectedDocIds.length ? selectedDocIds : undefined,
-                top_k_per_doc: 3,
-            };
-            const [aRes, tRes] = await Promise.all([
-                api.post('/query', body),
-                api.post('/theme', body),
-            ]);
-            setAnswers(aRes.data.individual_answers);
-            setThemes(tRes.data.themes);
-        } finally {
-            setLoadingQuery(false);
-        }
-    };
+    // const handleQuery = async (q: string) => {
+    //     if (!q.trim()) return;
+    //     setLoadingQuery(true);
+    //     try {
+    //         const body = {
+    //             question: q,
+    //             doc_ids: selectedDocIds.length ? selectedDocIds : undefined,
+    //             top_k_per_doc: 3,
+    //         };
+    //         const [aRes, tRes] = await Promise.all([
+    //             api.post('/query', body),
+    //             api.post('/theme', body),
+    //         ]);
+    //         setAnswers(aRes.data.individual_answers);
+    //         setThemes(tRes.data.themes);
+    //     } finally {
+    //         setLoadingQuery(false);
+    //     }
+    // };
 
     const openPreview = async (doc: DocumentMeta) => {
         const ext = doc.filename.split('.').pop()?.toLowerCase();

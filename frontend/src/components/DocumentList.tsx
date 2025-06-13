@@ -20,7 +20,6 @@ interface DocumentListProps {
 export default function DocumentList({
     docs,
     onSelectionChange,
-    onDocsUpdate,
 }: DocumentListProps) {
     const [filtered, setFiltered] = useState<DocumentMeta[]>(docs);
     const [search, setSearch] = useState('');
@@ -120,6 +119,7 @@ export default function DocumentList({
     );
 }
 function onDelete(docId: string) {
+    console.log(docId)
     throw new Error('Function not implemented.');
 }
 
